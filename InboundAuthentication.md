@@ -120,3 +120,116 @@ The first successful authentication occurred at **6:38:04 PM**, approximately 9 
 - **Account:** `administrator`
 - **First observed attempt:** 6:28:27 PM
 - **First successful login:** 6:38:04 PM
+
+## Part 3 — Post-Compromise Activity Investigation
+
+After identifying the successful authentication from **112.133.200.242**, I investigated process activity on **win-server-2026.corp.com** to determine what occurred after the account was accessed.
+
+`DeviceProcessEvents` was used to find the activity performed under the `administrator` account
+
+```kusto
+DeviceProcessEvents
+| where DeviceName == "win-server-2026.corp.com"
+| where Timestamp >= datetime(8/11/26 18:38:04)
+| where AccountName == "administrator"
+| project Timestamp, DeviceName, AccountName,
+          FileName, ProcessCommandLine,
+          InitiatingProcessFileName,
+          InitiatingProcessCommandLine
+| order by Timestamp asc
+```
+
+### 1. Remote Command Execution — 6:38:04 PM
+
+After the successful login, `WinrsHost.exe` launched under the `administrator` account and spawned `cmd.exe`.
+
+This indicates that remote commands began executing on the virtual machine immediately after authentication.
+
+![Workbook Image](https://i.imgur.com/bAkf7Za.png)
+
+---
+
+### 2. System Reconnaissance — 6:38:11 PM to 6:38:18 PM
+
+The attacker began gathering information about the system and preparing the machine for additional activity.
+
+Observed activity included:
+
+* Inspecting the Windows Startup folder
+![Workbook Image](https://imgur.com/dRm4bl7.png)
+The command line decodes to "Get-ChildItem 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\'"
+  
+* Identifying the operating system
+![Workbook Image](https://imgur.com/hTWmSPI.png)
+
+* Creating `C:\users\Migration`
+![Workbook Image](https://imgur.com/7s2zHBN.png)
+Decoded PowerShell "New-Item -Path "C:\users\Migration" -ItemType Directory" 
+  
+* Inspecting Microsoft Defender settings
+![Workbook Image](https://imgur.com/gn3LRq1.png)
+Decoded PowerShell "Get-MpPreference | fl DisableRealtimeMonitoring, ExclusionPath"
+---
+
+### 3. Microsoft Defender Tampering — 6:38:21 PM to 6:38:24 PM
+
+Shortly after performing reconnaissance, PowerShell commands were used to modify Microsoft Defender.
+
+Real-time monitoring was disabled and multiple Defender exclusion paths were added, including the newly created `C:\users\Migration` directory.
+
+<p align="center">
+  <img src="SCREENSHOT-URL-HERE" width="1200" alt="Microsoft Defender Tampering">
+</p>
+
+---
+
+### 4. Payload Downloads — 6:38:39 PM to 6:38:50 PM
+
+Multiple executable files were downloaded from the external IP address **77.110.114.53**.
+
+The downloaded files included:
+
+* `MicrosoftPrt.exe`
+* `svchosl.exe`
+* `run.exe`
+* `Wmiic.exe`
+* `browse.exe`
+
+Several files were placed inside `C:\users\Migration`, while others were placed inside the Windows Startup directory.
+
+<p align="center">
+  <img src="SCREENSHOT-URL-HERE" width="1200" alt="Payload Downloads">
+</p>
+
+---
+
+### 5. Persistence Established — 6:39:00 PM
+
+The downloaded `Wmiic.exe` executable was then used to install a service named `WMServices`.
+
+The service was configured to execute `svchosl.exe`, establishing persistence on the compromised virtual machine.
+
+<p align="center">
+  <img src="SCREENSHOT-URL-HERE" width="1200" alt="Persistence Established">
+</p>
+
+---
+
+### Attack Timeline
+
+```text
+6:38:04 PM — Successful administrator authentication
+     ↓
+6:38:04 PM — Remote command execution begins
+     ↓
+6:38:11–6:38:18 PM — System reconnaissance
+     ↓
+6:38:21–6:38:24 PM — Microsoft Defender tampering
+     ↓
+6:38:39–6:38:50 PM — Payloads downloaded
+     ↓
+6:39:00 PM — Persistence established using WMServices
+```
+
+The process activity following the successful authentication provides evidence that the account was used to execute commands, weaken endpoint security controls, download additional executables, establish persistence, and obtain SYSTEM-level execution on the affected virtual machine.
+
