@@ -216,7 +216,7 @@ The service was configured to execute `svchosl.exe`, establishing persistence on
 
 ### Attack Timeline
 
-```text
+
 6:38:04 PM — Successful administrator authentication
      ↓
 6:38:04 PM — Remote command execution begins
@@ -226,6 +226,23 @@ The service was configured to execute `svchosl.exe`, establishing persistence on
 6:38:21–6:38:24 PM — Microsoft Defender tampering
      ↓
 6:38:39–6:38:50 PM — Payloads downloaded
-     ↓
-6:39:00 PM — Persistence established using WMServices
-```
+
+## Part 4 — Incident Response and Final Assessment
+
+### Containment
+
+- Isolate `win-server-2026.corp.com`.
+- Block `112.133.200.242` and `77.110.114.53`.
+- Reset or disable the compromised `administrator` account.
+
+### Eradication
+
+- Remove malicious files and the `WMServices` service.
+- Remove unauthorized Microsoft Defender exclusions.
+- Re-enable Defender real-time monitoring.
+
+### Recovery
+
+- Verify no malicious processes or persistence remain.
+- Restore or rebuild the VM from a trusted state if necessary.
+- Return the VM to the network only after validation and continued monitoring.
