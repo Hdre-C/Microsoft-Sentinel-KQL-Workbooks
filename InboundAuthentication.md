@@ -179,7 +179,7 @@ Real-time monitoring was disabled.
 
 Decoded PowerShell "Set-MpPreference -DisableRealtimeMonitoring $True"
 
-![Workbook Image](https://imgur.com/8I92nGm.png)https://imgur.com/IQfbgUP
+![Workbook Image](https://imgur.com/8I92nGm.png)
 
 ---
 
