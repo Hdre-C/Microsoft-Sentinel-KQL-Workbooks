@@ -88,7 +88,7 @@ The IP address **112.133.200.242 (India)** was identified with suspicious remote
   <img src="https://i.imgur.com/gSdL9oD.png" width="1200" alt="Successful Login Investigation">
 </p>
 
-#### Part 2 — Authentication Timeline
+## Part 2 — Authentication Timeline
 
 To investigate the suspicious IP further, I filtered `DeviceLogonEvents` for **112.133.200.242** and ordered the authentication events by time.
 
@@ -216,16 +216,11 @@ The service was configured to execute `svchosl.exe`, establishing persistence on
 
 ### Attack Timeline
 
-
-6:38:04 PM — Successful administrator authentication
-     ↓
-6:38:04 PM — Remote command execution begins
-     ↓
-6:38:11–6:38:18 PM — System reconnaissance
-     ↓
-6:38:21–6:38:24 PM — Microsoft Defender tampering
-     ↓
-6:38:39–6:38:50 PM — Payloads downloaded
+1. **6:38:04 PM — Successful Administrator Authentication**
+2. **6:38:04 PM — Remote Command Execution Begins**
+3. **6:38:11–6:38:18 PM — System Reconnaissance**
+4. **6:38:21–6:38:24 PM — Microsoft Defender Tampering**
+5. **6:38:39–6:38:50 PM — Payloads Downloaded**
 
 ## Part 4 — Incident Response and Final Assessment
 
