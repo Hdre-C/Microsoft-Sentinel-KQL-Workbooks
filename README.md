@@ -25,7 +25,7 @@ This can help identify suspicious activity such as repeated failed login attempt
 
 ### 2. Outbound C2 Communication 📡
 
-**Location:** `Workbook-2-Outbound-C2/`
+**Location:** `OutboundC2Communication`
 
 This workbook investigates outbound connections made by virtual machines within the virtual network to external IP addresses.
 
