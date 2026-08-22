@@ -94,15 +94,7 @@ Destinations are prioritized using:
 - Direct IP communication
 - C2Score
 
-> 📸 **IMAGE 1 — C2 Overview**
->
-> Take a screenshot of the **full workbook map and results table**.
->
-> Make sure `RemoteIP`, `Connections`, `SuspiciousConnections`, `Processes`, and `C2Score` are visible.
-
-<p align="center">
-  <img src="YOUR_IMGUR_LINK" width="1200" alt="Outbound C2 Overview">
-</p>
+>  **C2 Overview** Image - Add later 
 
 ---
 
@@ -128,22 +120,8 @@ All five connections were initiated by **PowerShell** from a single device.
 
 This made the destination a high-priority **C2 candidate**.
 
-> 📸 **IMAGE 2 — Suspicious C2 Result**
->
-> Take a close screenshot of the row for `77.110.114.53`.
->
-> Make sure these values are visible:
->
-> - `C2Score = 7`
-> - `Connections = 5`
-> - `Devices = 1`
-> - `SuspiciousConnections = 5`
-> - `powershell.exe`
-> - Port `80`
+> **Suspicious C2 Result** Image - Add later 
 
-<p align="center">
-  <img src="YOUR_IMGUR_LINK" width="1200" alt="Suspicious C2 Candidate">
-</p>
 
 ---
 
@@ -176,23 +154,7 @@ DeviceNetworkEvents
 
 The repeated PowerShell connections show the destination was contacted more than once during the 30-day period.
 
-> 📸 **IMAGE 3 — Connection Timeline**
->
-> Run the query above and screenshot the raw network events.
->
-> Make sure these are visible:
->
-> - Timestamp
-> - DeviceName
-> - `powershell.exe`
-> - RemoteIP
-> - RemotePort
->
-> Try to show **all five connections**.
-
-<p align="center">
-  <img src="YOUR_IMGUR_LINK" width="1200" alt="C2 Connection Timeline">
-</p>
+> **Connection Timeline** Image - Add later 
 
 ---
 
@@ -227,20 +189,7 @@ One observed command downloaded `MicrosoftPrt.exe` directly from the IP:
 
 This links the outbound network activity to the **payload download activity identified in Workbook 1**.
 
-> 📸 **IMAGE 4 — PowerShell Correlation**
->
-> Screenshot the event containing:
->
-> - `powershell.exe`
-> - `77.110.114.53`
-> - `MicrosoftPrt.exe`
-> - The PowerShell download command
->
-> **This is the most important evidence screenshot.**
-
-<p align="center">
-  <img src="YOUR_IMGUR_LINK" width="1200" alt="PowerShell C2 Correlation">
-</p>
+> **PowerShell Correlation** Image - Add later 
 
 ---
 
@@ -256,37 +205,4 @@ This links the outbound network activity to the **payload download activity iden
 
 ## Part 5 — Incident Response
 
-### Containment
-
-- Isolate the affected VM
-- Block `77.110.114.53`
-- Search other devices for the same IP
-
-### Eradication
-
-- Remove downloaded payloads
-- Remove malicious persistence
-- Review PowerShell activity
-
-### Recovery
-
-- Verify communication has stopped
-- Restore or rebuild the VM if necessary
-- Continue monitoring outbound activity
-
----
-
-## Final Assessment
-
-`77.110.114.53` was identified as a **high-priority C2 candidate**.
-
-Key indicators included:
-
-- **5/5 connections from `powershell.exe`**
-- Only **1 affected device**
-- Direct communication to an IP over port `80`
-- **C2Score of 7**
-- The same IP was used to download malicious payloads
-
-The combination of **network and process telemetry** strongly links this destination to the previous compromise.
-
+........
