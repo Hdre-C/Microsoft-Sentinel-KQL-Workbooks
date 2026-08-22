@@ -133,14 +133,7 @@ I filtered the network telemetry for `77.110.114.53`.
 DeviceNetworkEvents
 | where Timestamp >= ago(30d)
 | where RemoteIP == "77.110.114.53"
-| project Timestamp,
-          DeviceName,
-          ActionType,
-          InitiatingProcessFileName,
-          InitiatingProcessCommandLine,
-          RemoteIP,
-          RemotePort,
-          RemoteUrl
+| project Timestamp, DeviceName, ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, RemoteUrl
 | order by Timestamp asc
 ```
 
@@ -165,14 +158,8 @@ I searched process telemetry for commands referencing the same IP.
 ```kusto
 DeviceProcessEvents
 | where Timestamp >= ago(30d)
-| where ProcessCommandLine has "77.110.114.53"
-    or InitiatingProcessCommandLine has "77.110.114.53"
-| project Timestamp,
-          DeviceName,
-          AccountName,
-          FileName,
-          ProcessCommandLine,
-          InitiatingProcessFileName
+| where ProcessCommandLine has "77.110.114.53" or InitiatingProcessCommandLine has "77.110.114.53"
+| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
 | order by Timestamp asc
 ```
 
