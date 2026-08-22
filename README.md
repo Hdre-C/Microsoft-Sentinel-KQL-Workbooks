@@ -8,7 +8,7 @@ The workbooks analyze authentication activity, network connections, data movemen
 
 ### 1. Inbound Authentication 🔐
 
-**Location:** `Workbook-1-Inbound-Authentication/`
+**Location:** `InboundAuthentication`
 
 This workbook investigates remote authentication attempts against virtual machines within the virtual network.
 
