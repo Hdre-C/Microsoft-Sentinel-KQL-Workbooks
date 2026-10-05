@@ -6,7 +6,7 @@ The workbooks analyze authentication activity, network connections, data movemen
 
 ## Workbooks
 
-### 1. Inbound Authentication 🔐
+### 1. Inbound Authentication 
 
 **Location:** `InboundAuthentication`
 
@@ -23,7 +23,7 @@ This can help identify suspicious activity such as repeated failed login attempt
 
 ---
 
-### 2. Outbound C2 Communication 📡
+### 2. Outbound C2 Communication 
 
 **Location:** `OutboundC2Communication`
 
@@ -38,37 +38,3 @@ It provides visibility into:
 - Geographic locations of external destinations
 
 Common Microsoft traffic is filtered out to reduce noise and make unusual outbound connections easier to investigate.
-
----
-
-### 3. Data Exfiltration 📤
-
-**Location:** `Workbook-3-Data-Exfiltration/`
-
-This workbook investigates outbound data movement from the virtual network to external destinations.
-
-It provides visibility into:
-- External destination IP addresses
-- Amount of outbound data transferred
-- Internal virtual machines sending data
-- Destination ports
-- Geographic locations of external destinations
-
-This can help identify unusual outbound data transfers that may require further investigation for potential data exfiltration.
-
----
-
-### 4. Threat Intelligence 🚨
-
-**Location:** `Workbook-4-Threat-Intelligence/`
-
-This workbook compares inbound network traffic to the virtual network against threat intelligence indicators in Microsoft Sentinel.
-
-It provides visibility into:
-- Known malicious or suspicious IP addresses communicating with the virtual network
-- Allowed connections from known malicious IP addresses
-- Virtual machines targeted by those IP addresses
-- Geographic origin of the suspicious traffic
-- Network ports targeted
-
-This can help identify known suspicious IP addresses that were allowed to connect to the virtual network.
