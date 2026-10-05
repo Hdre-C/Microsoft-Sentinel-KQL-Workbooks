@@ -1,4 +1,4 @@
-## 🔐 Workbook 1 — Inbound Authentication
+## Workbook 1 — Inbound Authentication
 
 This workbook investigates **remote authentication activity** against virtual machines in the environment.
 
