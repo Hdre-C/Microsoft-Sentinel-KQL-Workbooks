@@ -1,4 +1,4 @@
-## 📡 Workbook 2 — Outbound C2 Communication
+##  Workbook 2 — Outbound C2 Communication
 
 This workbook investigates **outbound connections to public internet destinations over the last 30 days**.
 
